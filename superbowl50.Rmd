@@ -5,10 +5,6 @@ date: "15 February 2016"
 output: html_document
 ---
 
-```{r}
-load("D:\\Foundations of Data Science\\Projects\\Foundations of Data Science - Capstone Project\\capstone.RData")
-```
-
 Superbowl 50. The culmination of the National Football League in the US - the champions of the American Football Conference playing the champions of the National Football Conference, for the right to call themselves the best.
 
 I've never been an American football fan, but every year, the Superbowl impedes into the consciousness of myself and many others. It's impossible to ignore - the lauded/derided (depending on who's singing) national anthem and halftime show; the platform for so many advertisers to get their wares in front of a huge domestic (and global) audience ($5 million for 30 seconds - but for that, the opportunity to get in front of 111.9 million Americans); and of course, the game itself.
@@ -21,9 +17,9 @@ However, in the spirit of good data scientists everywhere, I wanted the data to 
 
 My initial capstone project was to be in the area of Natural Language Processing (NLP) - more accurately, a sentiment analysis of Twitter information: tweets sent when the Web Summit (a huge technology summit) in Ireland decided to uproot and move to Lisbon. However, I hit a speedbump - the Twitter API doesn't allow you to pull information from further back than 1 week. The website does - however, I didn't have the time to figure out how best to scrape this information.
 
-So, thinking on my feet, I knew what I wanted to do - pull data, transform that data, mine it for trends and a story or two - could apply to other events, and Superbowl 50 had just happened. Now, I was still hamstrung a little - Twitter wouldn't let me pull tweets from the time of the game itself; my data set was tweets happening a day afterwards. 
+So, thinking on my feet, I knew what I wanted to do - pull data, transform that data, mine it for trends and a story or two - could apply to other events, and Superbowl 50 had just happened. Now, I was still hamstrung a little - Twitter wouldn't let me pull tweets from the time of the game itself; my data set was tweets happening a day or two afterwards. 
 
-It wasn't ideal. But it was enough.
+It wasn't ideal. But it was enough. However, throughout the report, I will call out when it was limiting.
 
 ## Natural Language Processing - An Approach
 
@@ -33,7 +29,7 @@ The approach I undertook - a Twitter data pull, the transforming of the data, th
 + The Tweet text itself
 + The Tweeter - who the person was, location, name, any other salient information from their Twitter profile (all the elements available through user-class in the twitteR package)
 * Content would be stored as a data frame, and the tm text mining package would be used on the data (R's most popular text mining package)
-* The tweet content would converted to a corpus (a large and structured set of texts)
+* The tweet content would be converted to a corpus (a large and structured set of texts)
 * The tweet text would be transformed using a number of standard approaches:
 * Convert the text to lowercase
 * Remove retweets, numbers, links, spaces, URLs
@@ -51,15 +47,19 @@ In the following sections, I'll discuss each of these in more detail, and will l
 
 ## Part 0: Loading the relevant libraries
 
-Before anything else, I load all the relevant libraries for this project. Most of these are related to text mining and graphing.
+Before anything else, I set my working directory, and load all the relevant libraries for this project. Most of these are related to text mining and graphing.
 
-```{r}
+```{r, echo=FALSE}
+setwd("D:\\Foundations of Data Science\\Projects\\Foundations of Data Science - Capstone Project\\")
+```
+
+```{r, message=FALSE}
 library(twitteR)
 library(RCurl)
 library(stringr)
 library(tm)
-library(dplyr)
 library(plyr)
+library(dplyr)
 library(reshape2)
 library(tidyr)
 library(tm)
@@ -79,23 +79,35 @@ I used the brilliant twitteR package to access the Twitter API. This would allow
 
 Using twitteR is exceptionally straightforward. 
 
-Firsly, I set myself up on Twitter as an app developer, as I needed the relevant details for an OAuth handshake (the link between myself and Twitter). This involved creating an app at Twitter ([link] https://dev.twitter.com/), logging in with my Twitter Account, and creating a new application. This gave me the necessary API keys which I then coded into R. As these are linked to me, I've kept them anonymous in this report. However, setting them, and the handshake up, is very straightforward.
+Firsly, I set myself up on Twitter as an app developer, as I needed the relevant details for an OAuth handshake (the link between myself and Twitter). This involved creating an app at Twitter (https://dev.twitter.com/), logging in with my Twitter Account, and creating a new application. This gave me the necessary API keys which I then coded into R. As these are linked to me, I've kept them anonymous in this report. However, setting them, and the handshake up, is very straightforward.
 
+```{r, eval=FALSE}
 consumer_key <- "INSERT YOUR OWN HERE"
 consumer_secret <- "INSERT YOUR OWN HERE"
 access_token <- "INSERT YOUR OWN HERE"
 access_secret <- "INSERT YOUR OWN HERE"
+```
 
 Then, I created the Twitter handshake itself.
 
+```{r, eval=FALSE}
 setup_twitter_oauth(consumer_key, consumer_secret, access_token, access_secret)
+```
 
 And finally, I pulled my data out of Twitter. To give myself a large data set, I used 4 main hashtags from the Superbowl (#superbowl, #superbowl50, #nfl and #sb50), and for each, pulled 10,000 tweets - easily done with the searchTwitter function. I also included English-language tweets only, and only ones from the 6th February onwards.
 
+```{r, eval=FALSE}
 superbowl <- searchTwitter("#superbowl", n = 10000, lang = "en", since = "2015-02-06")
 superbowl50 <- searchTwitter("#superbowl50", n = 10000, lang = "en", since = "2015-02-06")
 nfl <- searchTwitter("#nfl", n = 10000, lang = "en", since = "2015-02-06")
 sb50 <- searchTwitter("#sb50", n = 10000, lang = "en", since = "2015-02-06")
+```
+
+For the above, I haven't run these as code (unlike any R code in the rest of this report, which will run inline), as they will then overwrite the data I do have, due to Twitter's API. Instead, I'll load the data sets into this report from what I've already run.
+
+```{r}
+load("capstone.RData")
+```
 
 The searchTwitter function pulls back some very interesting information - the text of the status; the screen name of the user who posted this status; a unique ID; the screen name of the user this is in reply to (if applicable); the ID of the user this was in reply to (if applicable); when this status was created; whether the status has been favorited; the number of times this status has been retweeted (if applicable); and the longitude and latitude of the user (if available).
 
@@ -108,10 +120,10 @@ Next up, it was time to clean up what I had.
 Firstly, I wanted to strip retweets from my extracted Twitter data, as these would simply add too much noise. The twitteR package offers a strip_retweets() function for this exact task.
 
 ```{r}
-superbowl_no_rt = strip_retweets(superbowl)
-superbowl50_no_rt = strip_retweets(superbowl50)
-nfl_no_rt = strip_retweets(nfl)
-sb50_no_rt = strip_retweets(sb50)
+superbowl_no_rt <- strip_retweets(superbowl)
+superbowl50_no_rt <- strip_retweets(superbowl50)
+nfl_no_rt <- strip_retweets(nfl)
+sb50_no_rt <- strip_retweets(sb50)
 ```
 
 Then, I wanted to store the reduced data into data frames - my work later on would be on these data frames (or more accurately, a combined data frame from all 4 hashtags), and a corpus formed from the data pulled using twitteR (discussed below).
@@ -150,7 +162,7 @@ This has now left us with a set of words in the corpus - a set of words which ar
 
 The next step is to change the corpus into a Document Term Matrix - a mathematical matrix that describes the frequency of terms that occur in a collection of documents (where rows correspond to documents in the collection and columns correspond to terms).
 
-Alongside the DTM, I also create a sparse DTM - ignoring terms that have a document frequency lower than a given threshold (e.g. remocing words which may appear only once) - making our remaining terms more relevant (hopefully). 
+Alongside the DTM, I also create a sparse DTM - ignoring terms that have a document frequency lower than a given threshold (e.g. removing words which may appear only once) - making our remaining terms more relevant (hopefully). 
 
 In this case, however, I didn't remove too many terms (allowing 99% sparsity), as while there are a lot of terms occuring frequently, the sheer number of documents mean that anything below 99% carves off a lot of valuable data.
 
@@ -175,24 +187,31 @@ Firsly, we'll look at the most frequent words - words occurring more than 100 ti
 
 ```{r}
 min_freq <- 100
-findFreqTerms(combined_DTM, lowfreq = min_freq)
 term_freq <- colSums(as.matrix(combined_DTMs))
 term_freq <- subset(term_freq, term_freq >= min_freq)
 freq_words_df <- data.frame(term = names(term_freq), freq = term_freq)
+findFreqTerms(combined_DTM, lowfreq = min_freq)
 ```
 
-```{r, echo=FALSE}
+There are two non-English terms which we'll remove.
+
+```{r}
+freq_words_df <- freq_words_df[-1,]
+freq_words_df <- freq_words_df[-1,]
+```
+
+```{r, echo=FALSE, fig.width=10, fig.height=15}
 ggplot(data = freq_words_df, aes(x = reorder(term, freq), y = freq, colour = freq)) + 
   geom_bar(stat="identity") + 
   coord_flip() +
   ggtitle("Frequency of Most-Used Terms") +
   xlab("Terms") +
   ylab("Frequency") + 
-  theme(plot.title = element_text(size=14, face="bold", margin = margin(10, 0, 10, 0)), 
-        axis.title.x = element_text(face="bold", size = 12),
-        axis.title.y = element_text(face="bold", size = 12),
-        axis.text.x = element_text(face="bold", size=10),
-        axis.text.y = element_text(face="bold", size=10))
+  theme(plot.title = element_text(size=14, face = "bold", margin = margin(10, 0, 10, 0)), 
+        axis.title.x = element_text(face = "bold", size = 12),
+        axis.title.y = element_text(face = "bold", size = 12),
+        axis.text.x = element_text(face = "bold", size = 10),
+        axis.text.y = element_text(face = "bold", size = 10))
 ```
 
 So, some interesting things already jumping out - there are a few terms we would expect: terms relating to Cam Newton (the Carolina Panther's MVP) and Peyton Manning (the Denver Bronco's most well-known player); the teams themselves; the event. However, there's also a few others:
@@ -219,17 +238,17 @@ coldplay_assoc <- findAssocs(combined_DTM, "coldplay", assoc)
 broncos_associations_df <- do.call(rbind, Map(function(d, n) cbind.data.frame(xterm=if (length(d)>0) names(d) else NA, cor=if(length(d)>0) d else NA, term=n), panther_assoc, names(broncos_assoc)))
 ```
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, fig.width=10, fig.width=10}
 ggplot(data = broncos_associations_df, aes(x = reorder(xterm, -cor), y = cor)) +
   geom_point(size = 3, aes(colour = cor)) + 
   ggtitle("Words Associated with Broncos") +
   xlab("Terms") +
   ylab("Association") +
-  theme(plot.title = element_text(size=14, face="bold", margin = margin(10, 0, 10, 0)), 
-        axis.title.x = element_text(face="bold", size = 12),
-        axis.title.y = element_text(face="bold", size = 12),
-        axis.text.x = element_text(face="bold", size=10),
-        axis.text.y = element_text(face="bold", size=10)) +
+  theme(plot.title = element_text(size = 14, face = "bold", margin = margin(10, 0, 10, 0)), 
+        axis.title.x = element_text(face = "bold", size = 12),
+        axis.title.y = element_text(face = "bold", size = 12),
+        axis.text.x = element_text(face = "bold", size = 10, angle = 90),
+        axis.text.y = element_text(face = "bold", size = 10)) +
   scale_colour_gradientn(colours=c("red", "blue")) 
 ```
 
@@ -239,17 +258,17 @@ Key terms associated with "Broncos" are "stanleynelson" (an Emmy-award winning f
 avos_associations_df <- do.call(rbind, Map(function(d, n) cbind.data.frame(xterm=if (length(d)>0) names(d) else NA, cor=if(length(d)>0) d else NA, term=n), panther_assoc, names(avos_assoc)))
 ```
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, fig.width=10}
 ggplot(data = avos_associations_df, aes(x = reorder(xterm, -cor), y = cor)) +
   geom_point(size = 3, aes(colour = cor)) + 
   ggtitle("Words Associated with Avos") +
   xlab("Terms") +
   ylab("Association") +
-  theme(plot.title = element_text(size=14, face="bold", margin = margin(10, 0, 10, 0)), 
-        axis.title.x = element_text(face="bold", size = 12),
-        axis.title.y = element_text(face="bold", size = 12),
-        axis.text.x = element_text(face="bold", size=10),
-        axis.text.y = element_text(face="bold", size=10)) +
+  theme(plot.title = element_text(size=14, face = "bold", margin = margin(10, 0, 10, 0)), 
+        axis.title.x = element_text(face = "bold", size = 12),
+        axis.title.y = element_text(face = "bold", size = 12),
+        axis.text.x = element_text(face = "bold", size = 10, angle = 90),
+        axis.text.y = element_text(face = "bold", size = 10)) +
   scale_colour_gradientn(colours=c("red", "blue")) 
 ```
 
@@ -259,37 +278,37 @@ Key terms associated with "avosinspace" are the same as Bronco's: "stanleynelson
 cam_associations_df <- do.call(rbind, Map(function(d, n) cbind.data.frame(xterm=if (length(d)>0) names(d) else NA, cor=if(length(d)>0) d else NA, term=n), cam_assoc, names(cam_assoc)))
 ```
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, fig.width=10}
 ggplot(data = cam_associations_df, aes(x = reorder(xterm, -cor), y = cor)) +
   geom_point(size = 3, aes(colour = cor)) + 
-  ggtitle("Words Associated with Can") +
+  ggtitle("Words Associated with Cam") +
   xlab("Terms") +
   ylab("Association") +
-  theme(plot.title = element_text(size=14, face="bold", margin = margin(10, 0, 10, 0)), 
-        axis.title.x = element_text(face="bold", size = 12),
-        axis.title.y = element_text(face="bold", size = 12),
-        axis.text.x = element_text(face="bold", size=10),
-        axis.text.y = element_text(face="bold", size=10)) +
+  theme(plot.title = element_text(size=14, face = "bold", margin = margin(10, 0, 10, 0)), 
+        axis.title.x = element_text(face = "bold", size = 12),
+        axis.title.y = element_text(face = "bold", size = 12),
+        axis.text.x = element_text(face = "bold", size = 10, angle = 90),
+        axis.text.y = element_text(face = "bold", size = 10)) +
   scale_colour_gradientn(colours=c("red", "blue")) 
 ```
 
-Key terms associated with "cam" (Cam Newton) are "newton" (for obvious reasons), "fumble", "criticism", "didn't" and "learn"... It sounds like the Carolina Panther's player did something wrong - and a quick Google search confirms it: "Carolina Panthers quarterback Cam Newton has been harshly criticised for appearing to hesitate instead of jumping on the loose football he had fumbled late in the fourth quarter. The Denver Broncos recovered the ball, and on the ensuing drive C.J. Anderson found the back of the end zone to seal Denver's Super Bowl victory." [link] (http://uk.businessinsider.com/cam-newton-explains-why-he-didnt-jump-on-the-fumble-in-super-bowl-50-2016-2)
+Key terms associated with "cam" (Cam Newton) are "newton" (for obvious reasons), "fumble", "criticism", "didn't" and "learn"... It sounds like the Carolina Panther's player did something wrong - and a quick Google search confirms it: "Carolina Panthers quarterback Cam Newton has been harshly criticised for appearing to hesitate instead of jumping on the loose football he had fumbled late in the fourth quarter. The Denver Broncos recovered the ball, and on the ensuing drive C.J. Anderson found the back of the end zone to seal Denver's Super Bowl victory" (http://uk.businessinsider.com/cam-newton-explains-why-he-didnt-jump-on-the-fumble-in-super-bowl-50-2016-2).
 
 ```{r}
 patriot_associations_df <- do.call(rbind, Map(function(d, n) cbind.data.frame(xterm=if (length(d)>0) names(d) else NA, cor=if(length(d)>0) d else NA, term=n), patriot_assoc, names(patriot_assoc)))
 ```
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, fig.width=10}
 ggplot(data = patriot_associations_df, aes(x = reorder(xterm, -cor), y = cor)) +
   geom_point(size = 3, aes(colour = cor)) + 
   ggtitle("Words Associated with Patriot") +
   xlab("Terms") +
   ylab("Association") +
-  theme(plot.title = element_text(size=14, face="bold", margin = margin(10, 0, 10, 0)), 
-        axis.title.x = element_text(face="bold", size = 12),
-        axis.title.y = element_text(face="bold", size = 12),
-        axis.text.x = element_text(face="bold", size=10),
-        axis.text.y = element_text(face="bold", size=10)) +
+  theme(plot.title = element_text(size=14, face = "bold", margin = margin(10, 0, 10, 0)), 
+        axis.title.x = element_text(face = "bold", size = 12),
+        axis.title.y = element_text(face = "bold", size = 12),
+        axis.text.x = element_text(face = "bold", size = 10, angle = 90),
+        axis.text.y = element_text(face = "bold", size = 10)) +
   scale_colour_gradientn(colours=c("red", "blue")) 
 ```
 
@@ -301,17 +320,17 @@ In addition, it's evident Uber ran a promotion ("uber", "taxi", "getride", "code
 panther_associations_df <- do.call(rbind, Map(function(d, n) cbind.data.frame(xterm=if (length(d)>0) names(d) else NA, cor=if(length(d)>0) d else NA, term=n), panther_assoc, names(panther_assoc)))
 ```
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, fig.width=10}
 ggplot(data = panther_associations_df, aes(x = reorder(xterm, -cor), y = cor)) +
   geom_point(size = 3, aes(colour = cor)) + 
   ggtitle("Words Associated with Panther") +
   xlab("Terms") +
   ylab("Association") +
-  theme(plot.title = element_text(size=14, face="bold", margin = margin(10, 0, 10, 0)), 
-        axis.title.x = element_text(face="bold", size = 12),
-        axis.title.y = element_text(face="bold", size = 12),
-        axis.text.x = element_text(face="bold", size=10),
-        axis.text.y = element_text(face="bold", size=10)) +
+  theme(plot.title = element_text(size=14, face = "bold", margin = margin(10, 0, 10, 0)), 
+        axis.title.x = element_text(face = "bold", size = 12),
+        axis.title.y = element_text(face = "bold", size = 12),
+        axis.text.x = element_text(face = "bold", size = 10, angle = 90),
+        axis.text.y = element_text(face = "bold", size = 10)) +
   scale_colour_gradientn(colours=c("red", "blue")) 
 ```
 
@@ -321,17 +340,17 @@ As with "Broncos" and "avosinspace", key terms associated with "Panther" are "st
 newton_associations_df <- do.call(rbind, Map(function(d, n) cbind.data.frame(xterm=if (length(d)>0) names(d) else NA, cor=if(length(d)>0) d else NA, term=n), newton_assoc, names(newton_assoc)))
 ```
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, fig.width=10}
 ggplot(data = newton_associations_df, aes(x = reorder(xterm, -cor), y = cor)) +
   geom_point(size = 3, aes(colour = cor)) + 
   ggtitle("Words Associated with Newton") +
   xlab("Terms") +
   ylab("Association") +
-  theme(plot.title = element_text(size=14, face="bold", margin = margin(10, 0, 10, 0)), 
-        axis.title.x = element_text(face="bold", size = 12),
-        axis.title.y = element_text(face="bold", size = 12),
-        axis.text.x = element_text(face="bold", size=10),
-        axis.text.y = element_text(face="bold", size=10)) +
+  theme(plot.title = element_text(size=14, face = "bold", margin = margin(10, 0, 10, 0)), 
+        axis.title.x = element_text(face = "bold", size = 12),
+        axis.title.y = element_text(face = "bold", size = 12),
+        axis.text.x = element_text(face = "bold", size = 10, angle = 90),
+        axis.text.y = element_text(face = "bold", size = 10)) +
   scale_colour_gradientn(colours=c("red", "blue")) 
 ```
 
@@ -341,58 +360,58 @@ Cam Newton really did mess up, it seems: "postgame", "defended", "learn", "sor" 
 uber_associations_df <- do.call(rbind, Map(function(d, n) cbind.data.frame(xterm=if (length(d)>0) names(d) else NA, cor=if(length(d)>0) d else NA, term=n), uber_assoc, names(uber_assoc)))
 ```
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, fig.width=10}
 ggplot(data = uber_associations_df, aes(x = reorder(xterm, -cor), y = cor)) +
   geom_point(size = 3, aes(colour = cor)) + 
   ggtitle("Words Associated with Uber") +
   xlab("Terms") +
   ylab("Association") +
-  theme(plot.title = element_text(size=14, face="bold", margin = margin(10, 0, 10, 0)), 
-        axis.title.x = element_text(face="bold", size = 12),
-        axis.title.y = element_text(face="bold", size = 12),
-        axis.text.x = element_text(face="bold", size=10),
-        axis.text.y = element_text(face="bold", size=10)) +
+  theme(plot.title = element_text(size=14, face = "bold", margin = margin(10, 0, 10, 0)), 
+        axis.title.x = element_text(face = "bold", size = 12),
+        axis.title.y = element_text(face = "bold", size = 12),
+        axis.text.x = element_text(face = "bold", size = 10, angle = 90),
+        axis.text.y = element_text(face = "bold", size = 10)) +
   scale_colour_gradientn(colours=c("red", "blue")) 
 ```
 
-So, it's obvious Uber ran something big: "freeride", "taxi", "code", "promo", "free", "get" "your" "free" "ride". And Google confirms it: Honda offered free Uber rides for the two hours after the game. [link] (http://losangeles.cbslocal.com/2016/02/07/socal-honda-dealers-offer-free-uber-rides-following-super-bowl-50/)
+So, it's obvious Uber ran something big: "freeride", "taxi", "code", "promo", "free", "get" "your" "free" "ride". And Google confirms it: Honda offered free Uber rides for the two hours after the game - http://losangeles.cbslocal.com/2016/02/07/socal-honda-dealers-offer-free-uber-rides-following-super-bowl-50/.
 
 ```{r}
 beyonce_associations_df <- do.call(rbind, Map(function(d, n) cbind.data.frame(xterm=if (length(d)>0) names(d) else NA, cor=if(length(d)>0) d else NA, term=n), beyonce_assoc, names(beyonce_assoc)))
 beyonce_associations_df = beyonce_associations_df[-1,]
 ```
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, fig.width=10}
 ggplot(data = beyonce_associations_df, aes(x = reorder(xterm, -cor), y = cor)) +
   geom_point(size = 3, aes(colour = cor)) + 
   ggtitle("Words Associated with Beyonce") +
   xlab("Terms") +
   ylab("Association") +
-  theme(plot.title = element_text(size=14, face="bold", margin = margin(10, 0, 10, 0)), 
-        axis.title.x = element_text(face="bold", size = 12),
-        axis.title.y = element_text(face="bold", size = 12),
-        axis.text.x = element_text(face="bold", size=10),
-        axis.text.y = element_text(face="bold", size=10)) +
+  theme(plot.title = element_text(size=14, face = "bold", margin = margin(10, 0, 10, 0)), 
+        axis.title.x = element_text(face = "bold", size = 12),
+        axis.title.y = element_text(face = "bold", size = 12),
+        axis.text.x = element_text(face = "bold", size = 10, angle = 90),
+        axis.text.y = element_text(face = "bold", size = 10)) +
   scale_colour_gradientn(colours=c("red", "blue")) 
 ```
 
-For Beyonce, I've actually removed the first term, as it's not English. For the rest, we see a few associations: "boycotting", "oppressed", "uneducated" - it seems Beyonce ruffled a few feathers? Again, Google answers that question: her halftime show was more of a political statement; she emerged with a number of female backup dancers with Black Panther uniforms (which explains our previous associations above), and her show supported the Black Lives Matter movement. [link] (http://www.theguardian.com/music/2016/feb/08/beyonce-black-panthers-homage-black-lives-matter-super-bowl-50)
+For Beyonce, I've actually removed the first term, as it's not English. For the rest, we see a few associations: "boycotting", "oppressed", "uneducated" - it seems Beyonce ruffled a few feathers? Again, Google answers that question: her halftime show was more of a political statement; she emerged with a number of female backup dancers with Black Panther uniforms (which explains our previous associations above), and her show supported the Black Lives Matter movement - http://www.theguardian.com/music/2016/feb/08/beyonce-black-panthers-homage-black-lives-matter-super-bowl-50.
 
 ```{r}
 peyton_associations_df <- do.call(rbind, Map(function(d, n) cbind.data.frame(xterm=if (length(d)>0) names(d) else NA, cor=if(length(d)>0) d else NA, term=n), peyton_assoc, names(peyton_assoc)))
 ```
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, fig.width=10}
 ggplot(data = peyton_associations_df, aes(x = reorder(xterm, -cor), y = cor)) +
   geom_point(size = 3, aes(colour = cor)) + 
   ggtitle("Words Associated with Peyton") +
   xlab("Terms") +
   ylab("Association") +
-  theme(plot.title = element_text(size=14, face="bold", margin = margin(10, 0, 10, 0)), 
-        axis.title.x = element_text(face="bold", size = 12),
-        axis.title.y = element_text(face="bold", size = 12),
-        axis.text.x = element_text(face="bold", size=10),
-        axis.text.y = element_text(face="bold", size=10)) +
+  theme(plot.title = element_text(size=14, face = "bold", margin = margin(10, 0, 10, 0)), 
+        axis.title.x = element_text(face = "bold", size = 12),
+        axis.title.y = element_text(face = "bold", size = 12),
+        axis.text.x = element_text(face = "bold", size = 10, angle = 90),
+        axis.text.y = element_text(face = "bold", size = 10)) +
   scale_colour_gradientn(colours=c("red", "blue")) 
 ```
 
@@ -402,17 +421,17 @@ Peyton was primarily associated with Manning (for obvious reasons), and little e
 coldplay_associations_df <- do.call(rbind, Map(function(d, n) cbind.data.frame(xterm=if (length(d)>0) names(d) else NA, cor=if(length(d)>0) d else NA, term=n), coldplay_assoc, names(coldplay_assoc)))
 ```
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, fig.width=10}
 ggplot(data = coldplay_associations_df, aes(x = reorder(xterm, -cor), y = cor)) +
   geom_point(size = 3, aes(colour = cor)) + 
   ggtitle("Words Associated with Coldplay") +
   xlab("Terms") +
   ylab("Association") +
-  theme(plot.title = element_text(size=14, face="bold", margin = margin(10, 0, 10, 0)), 
-        axis.title.x = element_text(face="bold", size = 12),
-        axis.title.y = element_text(face="bold", size = 12),
-        axis.text.x = element_text(face="bold", size=10),
-        axis.text.y = element_text(face="bold", size=10)) +
+  theme(plot.title = element_text(size=14, face = "bold", margin = margin(10, 0, 10, 0)), 
+        axis.title.x = element_text(face = "bold", size = 12),
+        axis.title.y = element_text(face = "bold", size = 12),
+        axis.text.x = element_text(face = "bold", size = 10, angle = 90),
+        axis.text.y = element_text(face = "bold", size = 10)) +
   scale_colour_gradientn(colours=c("red", "blue")) 
 ```
 
@@ -424,8 +443,8 @@ So, our look into associations between words has uncovered a number of stories: 
 
 To better visualise term freqency, let's look at a wordcloud of the terms.
 
-```{r, echo=FALSE}
-wordcloud(combined_text_corpus, min.freq = min_freq, scale = c(2, 0.5), colors = brewer.pal(8, "Paired"),  random.color = TRUE, random.order = FALSE, max.words = 500)
+```{r, echo=FALSE, fig.width=6, fig.height=6}
+wordcloud(combined_text_corpus, min.freq = min_freq, scale = c(8, 0.5), rot.per=.15, colors = brewer.pal(8, "Paired"),  random.color = TRUE, random.order = FALSE, max.words = Inf)
 ```
 
 Naturally, we'd expect the hashtags used to be some of the most used terms - superbowl50, nfl, sb50, superbowl. Outside of many of our assocations above (all of which appear in the word cloud), there's not a huge amount else that jumps out - some team terms ("seahawk", "raider", "dallascowboy"), some sports terms ("reebok", "apparel"), television channels/networks ("espn"); all of which are to be expected.
@@ -440,17 +459,17 @@ Firstly, we'll use a Scree plot to determine the ideal number of clusters. A Scr
 
 Let's look at a Scree plot for 15 clusters, and we'll iterate on this 100,000 times.
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, fig.width=10}
 num_clusters = seq(2, 15, 1)
 sum_within_ss = sapply(2:15, function(x) sum(kmeans(combined_DTMs, centers = x, iter.max = 100000)$withinss))
 plot(num_clusters, sum_within_ss, type = "b")
 ```
 
-So, looking at this, we can see an elbow at 8/9 clusters (although the chart does start to peak up again at 12). For this analysis, we'll look at 8.
+So, looking at this, we can see an elbow at 8/9 clusters (although the chart does start to peak up again after). For this analysis, we'll look at 8.
 
 In addition, rather than a regular dendogram, we'll use a package (Ape) to create a more visually-appealing dendogram.
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, fig.width=10, fig.height=10}
 k = 8
 d <- dist(t(combined_DTMs), method = "euclidian")
 mypal <- brewer.pal(k, "Set1")
@@ -461,25 +480,25 @@ plot(as.phylo(hierclust), type = "fan", tip.color = mypal[groups])
 
 We can now see a number of distinct relationships: the largest is the game itself - teams, half-time show and performers, key players, etc. Increasing our cluster number will start to break out many of these. We also see a couple of small clusters related to the overarching hashtags we used.
 
-Of most interest is the Uber cluster, pulling together all the terms related to the free ride promo; and the Avo's cluster, which seems to be some sort of spot asking people to vode for their favourite...something? Google, as ever, provides: Avocados From Mexico ran a commercial, pusing the "avosinspace" hashtag (hence the frequency of the term), and a number of companies are now asking people to vote for their favourite Superbowl commercial (and it seems this was it.) [link] (http://marketingland.com/super-bowl-social-buzz-avosinspace-earning-most-mentions-so-far-on-twitter-162707)
+Of most interest is the Uber cluster, pulling together all the terms related to the free ride promo; and the Avo's cluster, which seems to be some sort of spot asking people to vode for their favourite...something? Google, as ever, provides: Avocados From Mexico ran a commercial, pusing the "avosinspace" hashtag (hence the frequency of the term), and a number of companies are now asking people to vote for their favourite Superbowl commercial (and it seems this was it) - http://marketingland.com/super-bowl-social-buzz-avosinspace-earning-most-mentions-so-far-on-twitter-162707.
 
 ## Part 6: How do you really feel? A sentiment analysis story in 1 part
 
 So, we know the most frequent terms, and how they're associated. But how do people FEEL, as they tweet? Sentiment analysis is a fascinating area, and one I wanted to try (albeit in a very simple fashion). 
 
-To build a sentiment analysis model, I built a separate function (scoresentiment.R), which takes in a piece of text, reviews it for positive and negative keywords, scores +1 for positive words found, -1 for negative words found, and tallies the scores, giving a sentiment score for each piece of text (in my case, each tweet). As mentioned, this is a simple approach - it won't recognise sarcasm, and the positive and negative word lists are from Hu and Liu's Opinion Lexicon ([link] (https://www.cs.uic.edu/~liub/FBS/sentiment-analysis.html#lexicon)) - a large, but not complete, lexicon. This approach is not new - there are several sentiment analyses online that use something similar. In my case, parts of the function needs to be rebuilt in order for it to return a sentiment score I could easily add into a larger data frame (see below).
+To build a sentiment analysis model, I built a separate function (scoresentiment.R), which takes in a piece of text, reviews it for positive and negative keywords, scores +1 for positive words found, -1 for negative words found, and tallies the scores, giving a sentiment score for each piece of text (in my case, each tweet). As mentioned, this is a simple approach - it won't recognise sarcasm, and the positive and negative word lists are from Hu and Liu's Opinion Lexicon (https://www.cs.uic.edu/~liub/FBS/sentiment-analysis.html#lexicon) - a large, but not complete, lexicon. This approach is not new - there are several sentiment analyses online that use something similar. In my case, parts of the function needs to be rebuilt in order for it to return a sentiment score I could easily add into a larger data frame (see below).
 
 First, we load the function written.
 
 ```{r}
-source("D:\\Foundations of Data Science\\Projects\\Foundations of Data Science - Capstone Project\\scoresentiment.R")
+source("scoresentiment.R")
 ```
 
 Then, we import the positive and negative keyword lists from Hu and Liu.
 
 ```{r}
-pos = scan(file="D:\\Foundations of Data Science\\Projects\\Foundations of Data Science - Capstone Project\\positive-words.txt", what = "character", comment.char = ";")
-neg = scan(file="D:\\Foundations of Data Science\\Projects\\Foundations of Data Science - Capstone Project\\negative-words.txt", what = "character", comment.char = ";")
+pos = scan(file = "positive-words.txt", what = "character", comment.char = ";")
+neg = scan(file = "negative-words.txt", what = "character", comment.char = ";")
 ```
 
 We'll be working on the combined data frame we created in the beginning, so we clean up the text parts of each tweet stored in the data frame in the same way we cleaned up the corpus (removing retweets, URLs, etc.), using gsub.
@@ -502,7 +521,7 @@ combined_df$sentiment <- score.sentiment(combined_df$text, pos, neg)
 
 And now let's plot it. We're going to use the square root of the volume of terms to make sure the histogram looks good, yet compact. Fingers crossed.
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, fig.width=10}
 ggplot(data = combined_df, aes(combined_df$sentiment)) + 
   geom_histogram(binwidth=1, origin = -6.5, color="darkblue", fill="lightblue") +
   ggtitle("Sentiment Histogram") +
@@ -510,11 +529,11 @@ ggplot(data = combined_df, aes(combined_df$sentiment)) +
   scale_y_sqrt() +
   xlab("Sentiment") +
   ylab("Number of Terms") +
-  theme(plot.title = element_text(size=14, face="bold", margin = margin(10, 0, 10, 0)), 
-        axis.title.x = element_text(face="bold", size = 12),
-        axis.title.y = element_text(face="bold", size = 12),
-        axis.text.x = element_text(face="bold", size=10),
-        axis.text.y = element_text(face="bold", size=10))
+  theme(plot.title = element_text(size=14, face = "bold", margin = margin(10, 0, 10, 0)), 
+        axis.title.x = element_text(face = "bold", size = 12),
+        axis.title.y = element_text(face = "bold", size = 12),
+        axis.text.x = element_text(face = "bold", size = 10),
+        axis.text.y = element_text(face = "bold", size = 10))
 ```
 
 Nothing exploded, and it worked. We can see that the vast majority of tweets are sentiment neutral (0), then 1 (positive), -1 (negative) and so forth. Overall, we can sentiment is hugely neutral, with the slightest bias towards positive; this is borne out when we look at the mean and median values.
@@ -537,18 +556,18 @@ combined_df_summary$created <- as.POSIXct(factor(paste0(as.character(combined_df
 
 Now, let's plot this out.
 
-```{r}
+```{r, echo=FALSE}
 ggplot(data = combined_df_summary, aes(x = created, y = avg)) +
   geom_line(colour="lightblue", size = 1) +
   scale_x_datetime(breaks=date_breaks("4 hour"), labels=date_format("%H:%M")) +
   ggtitle("Sentiment over a 24 Hour Period") +
   xlab("Time of Day") +
   ylab("Sentiment") +
-  theme(plot.title = element_text(size=14, face="bold", margin = margin(10, 0, 10, 0)), 
-        axis.title.x = element_text(face="bold", size = 12),
-        axis.title.y = element_text(face="bold", size = 12),
-        axis.text.x = element_text(face="bold", size=10),
-        axis.text.y = element_text(face="bold", size=10))
+  theme(plot.title = element_text(size=14, face = "bold", margin = margin(10, 0, 10, 0)), 
+        axis.title.x = element_text(face = "bold", size = 12),
+        axis.title.y = element_text(face = "bold", size = 12),
+        axis.text.x = element_text(face = "bold", size = 10),
+        axis.text.y = element_text(face = "bold", size = 10))
 ```
 
 We can see large swings in the averages - from -2 or so up to 3 at any given minute. Overall, however, the trend seems to be moving up over the course of the 24 hours.
@@ -566,17 +585,17 @@ combined_df_subset <- subset(combined_df, combined_df$favoriteCount > 50)
 combined_df_subset$favoriteCountBucket <- cut(combined_df_subset$favoriteCount, breaks = seq(50, 1800, by = 50))
 ```
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, fig.width=10, fig.height=20}
 ggplot(combined_df_subset, aes(x = favoriteCountBucket, y = screenName, fill = sentiment)) + 
   geom_tile() +
   ggtitle("Sentiment of the Most Popular Tweets (and Who Tweeted)") +
   xlab("Number of Times Favourited By Others") +
   ylab("Username") +
-  theme(plot.title = element_text(size=14, face="bold", margin = margin(10, 0, 10, 0)), 
-        axis.title.x = element_text(face="bold", size = 12),
-        axis.title.y = element_text(face="bold", size = 12),
-        axis.text.x = element_text(face="bold", size=10),
-        axis.text.y = element_text(face="bold", size=10))
+  theme(plot.title = element_text(size=14, face = "bold", margin = margin(10, 0, 10, 0)), 
+        axis.title.x = element_text(face = "bold", size = 12),
+        axis.title.y = element_text(face = "bold", size = 12),
+        axis.text.x = element_text(face = "bold", size = 10, angle = 90),
+        axis.text.y = element_text(face = "bold", size = 10))
 ```
 
 So, we can see that the most-favourited tweets were primarily neutral to negative; that those from the sports networks were more neutral (BBC, FOX Sports); a couple of celebrities got in on the act with positive tweets (Maroon 5, Nick Jonas); and Ron Celements (an NFL reporter) had the most-favourited negative tweet.
@@ -590,17 +609,17 @@ combined_df$longitude <- as.numeric(combined_df$longitude)
 combined_df$latitude <- as.numeric(combined_df$latitude)
 ```
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, fig.width=10, message=FALSE, warning=FALSE}
 ggplot() + 
-  borders(database = "world", regions = ".", colour="gray75", fill="gray75") +
+  borders(database = "world", regions = ".", colour = "gray75", fill = "gray75") +
   geom_point(data = combined_df, aes(x = longitude, y = latitude, color = sentiment), size = 3) + 
   ggtitle("Tweeter Locations") +
-  theme(plot.title = element_text(size=14, face="bold", margin = margin(10, 0, 10, 0)), 
-        axis.title.x = element_text(face="bold", size = 12),
-        axis.title.y = element_text(face="bold", size = 12),
-        axis.text.x = element_text(face="bold", size=10),
-        axis.text.y = element_text(face="bold", size=10)) +
-  scale_colour_gradientn(colours=c("red", "blue"))
+  theme(plot.title = element_text(size=14, face = "bold", margin = margin(10, 0, 10, 0)), 
+        axis.title.x = element_text(face = "bold", size = 12),
+        axis.title.y = element_text(face = "bold", size = 12),
+        axis.text.x = element_text(face = "bold", size = 10),
+        axis.text.y = element_text(face = "bold", size = 10)) +
+  scale_colour_gradientn(colours = c("red", "blue"))
 ```
 
 Mapping them, we see the West coast of the US is a little more positive than the East coast, and as we travel from West to East, sentiment gets more negative.

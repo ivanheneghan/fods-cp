@@ -1,13 +1,13 @@
 # Install packages
-# install.packages("base64enc")
-# install.packages("twitteR")
-# install.packages("RCurl")
-# install.packages("tm")
-# install.packages("wordcloud")
-# install.packages("SnowballC")
-# install.packages("fpc")
-# install.packages("RColorBrewer")
-# install.packages("ape")
+install.packages("base64enc")
+install.packages("twitteR")
+install.packages("RCurl")
+install.packages("tm")
+install.packages("wordcloud")
+install.packages("SnowballC")
+install.packages("fpc")
+install.packages("RColorBrewer")
+install.packages("ape")
 
 # Load relevant libraries
 library(twitteR)
@@ -32,27 +32,27 @@ library(ape)
 # 1. Extract data from Twitter
 
 # Set up Twitter API credentials
-# consumer_key <- "jnUHsr3bg5QscbQcIMF9xei1A"
-# consumer_secret <- "6GJQGIUA63kfO8uIKz8I6fQI7BA9KTFPXDofp6HxvxEJF8Wu4d"
-# access_token <- "14611173-xXtSpD44S8A1zWv4Qzit6DwdXOuIC4hm57WvZycHA"
-# access_secret <- "AMxapPQJZnadlTqns1JyoUBquVNfov6AqEt9Pn1z3jpFI"
+consumer_key <- "jnUHsr3bg5QscbQcIMF9xei1A"
+consumer_secret <- "6GJQGIUA63kfO8uIKz8I6fQI7BA9KTFPXDofp6HxvxEJF8Wu4d"
+access_token <- "14611173-xXtSpD44S8A1zWv4Qzit6DwdXOuIC4hm57WvZycHA"
+access_secret <- "AMxapPQJZnadlTqns1JyoUBquVNfov6AqEt9Pn1z3jpFI"
 
 # Create Twitter connection
-# setup_twitter_oauth(consumer_key, consumer_secret, access_token, access_secret)
+setup_twitter_oauth(consumer_key, consumer_secret, access_token, access_secret)
 
 # Get Twitter data for each of the 4 main hashtags - 10k tweets for each, from 6/2 onwards, English language tweets only
-# superbowl <- searchTwitter("#superbowl", n = 10000, lang = "en", since = "2015-02-06")
-# superbowl50 <- searchTwitter("#superbowl50", n = 10000, lang = "en", since = "2015-02-06")
-# nfl <- searchTwitter("#nfl", n = 10000, lang = "en", since = "2015-02-06")
-# sb50 <- searchTwitter("#sb50", n = 10000, lang = "en", since = "2015-02-06")
+superbowl <- searchTwitter("#superbowl", n = 10000, lang = "en", since = "2015-02-06")
+superbowl50 <- searchTwitter("#superbowl50", n = 10000, lang = "en", since = "2015-02-06")
+nfl <- searchTwitter("#nfl", n = 10000, lang = "en", since = "2015-02-06")
+sb50 <- searchTwitter("#sb50", n = 10000, lang = "en", since = "2015-02-06")
 
 # 2. Manipulate & clean extracted data
 
 # Strip retweets from extracted Twitter data
-superbowl_no_rt = strip_retweets(superbowl)
-superbowl50_no_rt = strip_retweets(superbowl50)
-nfl_no_rt = strip_retweets(nfl)
-sb50_no_rt = strip_retweets(sb50)
+superbowl_no_rt <- strip_retweets(superbowl)
+superbowl50_no_rt <- strip_retweets(superbowl50)
+nfl_no_rt <- strip_retweets(nfl)
+sb50_no_rt <- strip_retweets(sb50)
 
 # Create data frames from Twitter data
 superbowl_df <- twListToDF(superbowl_no_rt)
